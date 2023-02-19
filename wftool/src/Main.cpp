@@ -1,6 +1,11 @@
 #include <Windflower/Windflower.hpp>
 
 #include <cstdlib>
+#include <filesystem>
+
+#include <iostream>
+#include <fstream>
+#include <sstream>
 
 namespace wftool
 {
@@ -18,6 +23,31 @@ namespace wftool
             return std::realloc(buffer, new_size);
         }
     };
+
+    void compile_from_file(wf::Environment& env, std::size_t idx, std::string_view path)
+    {
+        std::string file_text;
+        {
+            std::ifstream file(path);
+            if(!file.is_open())
+            {
+                std::cerr << "Could not open file '" << path << "'.\n";
+                std::exit(EXIT_FAILURE);
+            }
+
+            std::ostringstream file_text_stream;
+            file_text_stream << file.rdbuf();
+            file.close();
+            file_text = file_text_stream.str();
+        }
+
+        wf::CompileInfo compile_info = {
+            .name = path,
+            .source = file_text
+        };
+
+        env.compile(idx, compile_info);
+    }
 }
 
 int main(int argc, const char* argv[])
@@ -32,6 +62,7 @@ int main(int argc, const char* argv[])
     };
 
     wf::Environment env(create_info);
-    env.push(10);
-    
+    env.reserve(1);
+    wftool::compile_from_file(env, 0, "TestScripts/Main.wf");
+    env.call(0);
 }

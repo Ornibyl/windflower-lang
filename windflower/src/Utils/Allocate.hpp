@@ -24,7 +24,7 @@ namespace wf
     template<typename T, typename... Args>
     T* construct_ptr(State* state, Args&&... args)
     {
-        T* ptr = allocate(state, sizeof(T));
+        T* ptr = static_cast<T*>(allocate(state, sizeof(T)) );
         try
         {
             new(ptr) T(std::forward<Args>(args)...);
@@ -82,7 +82,7 @@ namespace wf
         using size_type = std::size_t;
         using difference_type = std::ptrdiff_t;
 
-        StdAllocator(State* state)
+        StdAllocator(State* state) noexcept
             : m_state(state)
         {
         }

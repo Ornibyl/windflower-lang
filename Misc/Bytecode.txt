@@ -1,0 +1,22 @@
+; Just an example, not real bytecode
+<main>[
+code:
+    ; Example script:
+    ; var v1: Int := 20 + 5
+    ; var v2: Int := v1
+
+    ; [rsv (op)] - preserve registers from R(0) to, but not including R(op) after function calls.
+    ; [ldk (a, b)] - Move a constant from K(b) to R(a).
+    ; [addi (a, b)] -- Add the values of R(a) and R(b) and store the result in R(a).
+    ; [mov (a, b)] -- Copy the value at R(b) into R(a).
+
+    rsv     2
+    ldk     0   0
+    ldk     1   1
+    addi    0   1
+    mov     1   0
+    ret
+data:
+    [0]: 20
+    [1]: 5
+]

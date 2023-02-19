@@ -55,6 +55,12 @@ project "windflower"
         "%{prj.name}/src"
     }
 
+    externalincludedirs {
+        "%{prj.name}/vendor/fmt-9.1.0/include",
+    }
+
+    defines { "FMT_HEADER_ONLY" }
+
     default_build_options()
     default_config_info()
 

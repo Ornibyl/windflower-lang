@@ -23,6 +23,12 @@ namespace wf
         Allocator* allocator = nullptr;
     };
 
+    struct CompileInfo
+    {
+        std::string_view name;
+        std::string_view source;
+    };
+
     class Environment
     {
     public:
@@ -31,18 +37,23 @@ namespace wf
         Environment& operator=(Environment&& other);
         ~Environment();
 
-        void push(std::size_t count);
-        void pop(std::size_t count);
+        void reserve(std::size_t count);
+        void release(std::size_t count);
+        std::size_t get_reserved_register_count() const;
+
+        void compile(std::size_t idx, const CompileInfo& compile_info);
+        void call(std::size_t idx, std::size_t return_idx);
+        void call(std::size_t idx);
 
         void store_int(std::size_t idx, Int value);
         void store_uint(std::size_t idx, UInt value);
         void store_float(std::size_t idx, Float value);
         void store_bool(std::size_t idx, bool value);
 
-        Int get_int(std::size_t idx);
-        UInt get_uint(std::size_t idx);
-        Float get_float(std::size_t idx);
-        bool get_bool(std::size_t idx);
+        Int get_int(std::size_t idx) const;
+        UInt get_uint(std::size_t idx) const;
+        Float get_float(std::size_t idx) const;
+        bool get_bool(std::size_t idx) const;
     private:
         State* m_state;
     };

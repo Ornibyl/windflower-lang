@@ -2,6 +2,8 @@
 #define WF_OBJECT_HPP
 
 #include "Utils/Array.hpp"
+#include "Instructions.hpp"
+#include "Value.hpp"
 
 namespace wf
 {
@@ -21,6 +23,10 @@ namespace wf
             BYTECODE,
         };
 
+        Object(State* state);
+
+        Object* next = nullptr;
+
         virtual ~Object() = default;
     };
 
@@ -29,12 +35,13 @@ namespace wf
         WF_POLYMORPHIC_SIZING
 
         BytecodeObject(State* state)
-            : line_info(state), code(state)
+            : Object(state), line_info(state), code(state), constants(state)
         {
         }
 
         DynamicArray<BytecodeLineInfo> line_info;
-        DynamicArray<std::uint8_t> code;
+        DynamicArray<Instruction> code;
+        DynamicArray<Value> constants;
     };
 }
 
