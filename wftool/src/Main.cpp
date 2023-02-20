@@ -46,7 +46,12 @@ namespace wftool
             .source = file_text
         };
 
-        env.compile(idx, compile_info);
+        if(!env.compile(idx, compile_info))
+        {
+            std::cerr << "Could not compile file '" << path << "'.\n";
+            std::cerr << env.get_string(idx) << "\n";
+            std::exit(EXIT_FAILURE);
+        }
     }
 }
 

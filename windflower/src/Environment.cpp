@@ -1,21 +1,34 @@
 #include "State.hpp"
 
+#include "Utils/Format.hpp"
 #include "Vm/Object.hpp"
+#include "Utils/Allocate.hpp"
 
 namespace wf
 {
     State::State(const EnvironmentCreateInfo& create_info)
-        : allocator(*create_info.allocator), vm(this)
+        : allocator(*create_info.allocator), interned_strings(this), vm(this)
     {
+        // Global frame
+        stack.push_frame(nullptr, 0, 0);
+    }
+
+    State::~State()
+    {
+        stack.pop_frame();
+        Object* obj = allocated_objects;
+        while(obj != nullptr)
+        {
+            Object* deleted_object = obj;
+            obj = obj->next;
+            destruct_ptr(this, deleted_object);
+        }
     }
 
     Environment::Environment(const EnvironmentCreateInfo& create_info)
     {
         m_state = static_cast<State*>( (*create_info.allocator)(nullptr, 0, sizeof(State)) );
         new(m_state) State(create_info);
-
-        // Global frame
-        m_state->stack.push_frame(nullptr, 0, 0);
     }
 
     Environment::Environment(Environment&& other)
@@ -36,8 +49,6 @@ namespace wf
 
     Environment::~Environment()
     {
-        m_state->stack.pop_frame();
-
         Allocator& allocator = m_state->allocator;
         m_state->~State();
         allocator(m_state, sizeof(State), 0);
@@ -58,24 +69,13 @@ namespace wf
         return m_state->stack.get_reserved_register_count();
     }
 
-    void Environment::compile(std::size_t idx, const CompileInfo& compile_info)
+    bool Environment::compile(std::size_t idx, const CompileInfo& compile_info)
     {
-        // Everything here is temporary
-        (void)compile_info;
-
-        BytecodeObject* bytecode = construct_ptr<BytecodeObject>(m_state, m_state);
-
-        bytecode->constants.emplace_back(Value{ .as_int = 20 });
-        bytecode->constants.emplace_back(Value{ .as_int = 5 });
-
-        bytecode->code.emplace_back(Instruction(Opcode::RESERVE, 2));
-        bytecode->code.emplace_back(Instruction(Opcode::LOAD_CONSTANT, 0, 0));
-        bytecode->code.emplace_back(Instruction(Opcode::LOAD_CONSTANT, 1, 1));
-        bytecode->code.emplace_back(Instruction(Opcode::ADD_INT, 0, 1));
-        bytecode->code.emplace_back(Instruction(Opcode::MOVE, 1, 0));
-        bytecode->code.emplace_back(Instruction(Opcode::RETURN, 2));
-
-        m_state->stack.index(idx).as_object = bytecode;
+        m_state->stack.index(idx) = StringObject::from_text(
+            m_state,
+            format(m_state, "{}(\?\?\?) Error: Compilation pipeline is incomplete.", compile_info.name)
+        );
+        return false;
     }
 
     void Environment::call(std::size_t idx, std::size_t return_idx)
@@ -108,6 +108,11 @@ namespace wf
         m_state->stack.index(idx).as_bool = value;
     }
 
+    void Environment::store_string(std::size_t idx, std::string_view value)
+    {
+        m_state->stack.index(idx).as_object = StringObject::from_text(m_state, value);
+    }
+
     Int Environment::get_int(std::size_t idx) const
     {
         return static_cast<Int>(m_state->stack.index(idx).as_int);
@@ -126,6 +131,12 @@ namespace wf
     bool Environment::get_bool(std::size_t idx) const
     {
         return m_state->stack.index(idx).as_bool;
+    }
+
+    std::string_view Environment::get_string(std::size_t idx) const
+    {
+        StringObject* str = m_state->stack.index(idx).as_string();
+        return { str->text, str->length };
     }
 
 }

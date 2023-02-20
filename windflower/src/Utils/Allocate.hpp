@@ -10,7 +10,7 @@ namespace wf
     template<typename T>
     concept has_polymorphic_size_enable = requires(T* t)
     {
-        { T::polymorphic_size_enable } -> std::same_as<std::true_type>;
+        { typename T::polymorphic_size_enable() } -> std::same_as<std::true_type>;
         { t->get_class_size() } -> std::same_as<std::size_t>;
     };
 
@@ -87,6 +87,15 @@ namespace wf
         {
         }
 
+        StdAllocator(const StdAllocator& other) noexcept = default;
+        StdAllocator(StdAllocator&& other) noexcept = default;
+
+        template<typename U>
+        StdAllocator(const StdAllocator<U>& other) noexcept
+            : m_state(other.get_state())
+        {
+        }
+
         bool operator==(const StdAllocator<T>&) const noexcept = default;
         auto operator<=>(const StdAllocator<T>&) const noexcept = default;
 
@@ -99,6 +108,8 @@ namespace wf
         {
             deallocate_array(m_state, ptr, size);
         }
+
+        State* get_state() const { return m_state; }
 
     private:
         State* m_state;
