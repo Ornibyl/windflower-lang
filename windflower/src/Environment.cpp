@@ -3,7 +3,8 @@
 #include "Utils/Format.hpp"
 #include "Vm/Object.hpp"
 #include "Utils/Allocate.hpp"
-#include "Compiler/Tokenizer.hpp"
+
+#include "Compiler/Parser.hpp"
 
 namespace wf
 {
@@ -72,14 +73,13 @@ namespace wf
 
     bool Environment::compile(std::size_t idx, const CompileInfo& compile_info)
     {
-        DynamicArray<Token> tokens(m_state);
+        Parser parser(m_state, compile_info);
 
-        Tokenizer tokenizer(compile_info.name, compile_info.source);
-
-        while(true)
+        Node* ast = parser.parse();
+        if(ast == nullptr)
         {
-            const Token& token = tokens.emplace_back(tokenizer.next());
-            if(token.get_type() == Token::Type::TT_EOF) break;
+            m_state->stack.index(idx) = StringObject::from_text(m_state, parser.get_error_message());
+            return false;
         }
 
         m_state->stack.index(idx) = StringObject::from_text(

@@ -37,7 +37,7 @@ namespace wf
         return ptr;
     }
 
-    template<typename T, typename... Args>
+    template<typename T>
     void destruct_ptr(State* state, T* ptr)
     {
         if constexpr(std::is_polymorphic_v<T>)
@@ -47,12 +47,12 @@ namespace wf
             std::size_t size = ptr->get_class_size();
 
             ptr->~T();
-            deallocate(state, state, size);
+            deallocate(state, ptr, size);
         }
         else
         {
             ptr->~T();
-            deallocate(state, state, sizeof(T));
+            deallocate(state, ptr, sizeof(T));
         }
     }
 

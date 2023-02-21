@@ -27,7 +27,9 @@ namespace wf
 
             INT_CONSTANT, FLOAT_CONSTANT,
             PLUS, MINUS, STAR, SLASH, PERCENT,
-            LEFT_PAREN, RIGHT_PAREN
+            LEFT_PAREN, RIGHT_PAREN,
+
+            TT_COUNT,
         };
 
         Token() = default;
