@@ -3,6 +3,7 @@
 #include "Utils/Format.hpp"
 #include "Vm/Object.hpp"
 #include "Utils/Allocate.hpp"
+#include "Compiler/Tokenizer.hpp"
 
 namespace wf
 {
@@ -71,6 +72,16 @@ namespace wf
 
     bool Environment::compile(std::size_t idx, const CompileInfo& compile_info)
     {
+        DynamicArray<Token> tokens(m_state);
+
+        Tokenizer tokenizer(compile_info.name, compile_info.source);
+
+        while(true)
+        {
+            const Token& token = tokens.emplace_back(tokenizer.next());
+            if(token.get_type() == Token::Type::TT_EOF) break;
+        }
+
         m_state->stack.index(idx) = StringObject::from_text(
             m_state,
             format(m_state, "{}(\?\?\?) Error: Compilation pipeline is incomplete.", compile_info.name)
