@@ -2,6 +2,7 @@
 #define WF_PARSER_HPP
 
 #include <stack>
+#include <concepts>
 
 #include "Nodes.hpp"
 #include "Tokenizer.hpp"
@@ -25,7 +26,7 @@ namespace wf
         ErrorManager m_error_manager;
         std::stack<bool, DynamicArray<bool>> m_newline_ignore_stack;
 
-        DynamicArray<ScopedPtr<Node>> allocated_nodes;
+        DynamicArray<ScopedPtr<Node>> m_allocated_nodes;
 
         Token m_current;
 
@@ -57,14 +58,15 @@ namespace wf
         Node* parse_binary_op(Node* prev);
         Node* parse_unary_op();
         Node* parse_constant();
+        Node* parse_grouping();
 
         static const ExprRule& get_rule(Token::Type type);
 
-        template<typename T, typename... Args>
+        template<typename T, typename... Args> requires(std::derived_from<T, Node> && std::constructible_from<T, Args...>)
         T* allocate_node(Args&&... args)
         {
-            allocated_nodes.push_back(construct_scoped<T>(m_state, std::forward<Args>(args)...));
-            return static_cast<T*>(allocated_nodes.back().get());
+            m_allocated_nodes.push_back(construct_scoped<T>(m_state, std::forward<Args>(args)...));
+            return static_cast<T*>(m_allocated_nodes.back().get());
         }
     };
 }

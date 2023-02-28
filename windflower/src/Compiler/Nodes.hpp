@@ -17,7 +17,7 @@ namespace wf
         {
             BINARY_OP,
             UNARY_OP,
-            LITERAL,
+            CONSTANT,
         };
 
         Node(Type type)
@@ -73,7 +73,7 @@ namespace wf
         WF_POLYMORPHIC_SIZING
 
         ConstantNode()
-            : Node(Type::LITERAL)
+            : Node(Type::CONSTANT)
         {
         }
 

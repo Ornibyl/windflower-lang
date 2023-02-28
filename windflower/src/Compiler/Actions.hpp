@@ -2,17 +2,72 @@
 #define WF_ACTIONS_HPP
 
 #include "Compiler/Token.hpp"
+#include "Utils/Allocate.hpp"
 #include "Windflower/Windflower.hpp"
 
 namespace wf
 {
+    #define WF_NUMERIC_UNARY_OPERATIONS ADD, SUBTRACT, MULTIPLY, DIVIDE
+
     enum class TypeId
     {
-        INT, FLOAT
+        VOID, INT, FLOAT
     };
 
-    struct Action
+    constexpr std::string_view type_id_to_string(TypeId type_id)
     {
+        switch(type_id)
+        {
+            case TypeId::VOID: return "void";
+            case TypeId::INT: return "int";
+            case TypeId::FLOAT: return "float";
+        }
+    }
+
+    constexpr bool type_id_is_numeric(TypeId type_id)
+    {
+        return type_id == TypeId::INT || type_id == TypeId::FLOAT;
+    }
+
+    constexpr bool type_id_is_int(TypeId type_id)
+    {
+        return type_id == TypeId::INT;
+    }
+
+    constexpr bool type_id_is_float(TypeId type_id)
+    {
+        return type_id == TypeId::FLOAT;
+    }
+
+    constexpr TypeId type_id_numeric_promote(TypeId left_type, TypeId right_type)
+    {
+        if(left_type == right_type) return left_type;
+
+        return TypeId::FLOAT;
+    }
+
+    enum class NumericUnaryOperation
+    {
+        NEGATION,
+    };
+
+    enum class IntBinaryOperation
+    {
+        WF_NUMERIC_UNARY_OPERATIONS,
+        MODULO,
+    };
+
+    enum class FloatBinaryOperation
+    {
+        WF_NUMERIC_UNARY_OPERATIONS
+    };
+
+    class Action
+    {
+    public:
+        using polymorphic_size_enable = std::true_type;
+        WF_POLYMORPHIC_SIZING
+
         enum class Type
         {
             INT_UNARY,
@@ -20,130 +75,135 @@ namespace wf
             INT_BINARY,
             FLOAT_BINARY,
 
-            INT_TO_FLOAT,
-            FLOAT_TO_INT,
+            NUMERIC_CONVERSION,
 
             INT_CONSTANT,
             FLOAT_CONSTANT,
         };
 
-        Action(Type type)
-            : type(type)
+        Action(const SourcePosition& position, Type type)
+            : type(type), position(position)
         {
         }
 
         virtual ~Action() = default;
 
         const Type type;
-        SourcePosition position;
+        const SourcePosition position;
     };
 
-    struct IntUnaryAction : Action
+    class ExprAction : public Action
     {
-        IntUnaryAction()
-            : Action(Type::INT_UNARY)
+    public:
+        WF_POLYMORPHIC_SIZING
+        ExprAction(const SourcePosition& position, Type type, TypeId result_type)
+            : Action(position, type), m_result_type(result_type)
         {
         }
 
-        enum class Operation
-        {
-            NEGATION,
-        };
-
-        Action* operand;
+        TypeId get_result_type() const { return m_result_type; }
+    private:
+        TypeId m_result_type;
     };
 
-    struct FloatUnaryAction : Action
+    template<typename OperationEnum, Action::Type ActionType>
+    class UnaryAction : public ExprAction
     {
-        FloatUnaryAction()
-            : Action(Type::FLOAT_UNARY)
+    public:
+        WF_POLYMORPHIC_SIZING
+
+        using Operation = OperationEnum;
+
+        UnaryAction(const SourcePosition& position, Operation operation, ExprAction* operand)
+            : ExprAction(position, ActionType, operand->get_result_type()), m_operation(operation), m_operand(operand)
         {
         }
 
-        enum class Operation
-        {
-            NEGATION,
-        };
-
-        Action* operand;
+        Operation get_operation() const { return m_operation; }
+        ExprAction* get_operand() { return m_operand; }
+        const ExprAction* get_operand() const { return m_operand; }
+    private:
+        Operation m_operation;
+        ExprAction* m_operand;
     };
 
-    struct IntBinaryAction : Action
+    template<typename OperationEnum, Action::Type ActionType>
+    class BinaryAction : public ExprAction
     {
-        IntBinaryAction()
-            : Action(Type::INT_BINARY)
+    public:
+        WF_POLYMORPHIC_SIZING
+        using Operation = OperationEnum;
+
+        BinaryAction(const SourcePosition& position, Operation operation, TypeId result_type,
+                ExprAction* left_operand, ExprAction* right_operand)
+            : ExprAction(position, ActionType, result_type), m_operation(operation), m_left_operand(left_operand), m_right_operand(right_operand)
         {
         }
 
-        enum class Operation
-        {
-            ADD,
-            SUBTRACT,
-            MULTIPLY,
-            DIVIDE,
-            MODULO,
-        };
-
-        Action* operand;
+        Operation get_operation() const { return m_operation; }
+        ExprAction* get_left_operand() { return m_left_operand; }
+        const ExprAction* get_left_operand() const { return m_left_operand; }
+        ExprAction* get_right_operand() { return m_right_operand; }
+        const ExprAction* get_right_operand() const { return m_right_operand; }
+    private:
+        Operation m_operation;
+        ExprAction* m_left_operand;
+        ExprAction* m_right_operand;
     };
 
-    struct FloatBinaryAction : Action
+    using IntUnaryAction = UnaryAction<NumericUnaryOperation, Action::Type::INT_UNARY>;
+    using FloatUnaryAction = UnaryAction<NumericUnaryOperation, Action::Type::FLOAT_UNARY>;
+
+    using IntBinaryAction = BinaryAction<IntBinaryOperation, Action::Type::INT_BINARY>;
+    using FloatBinaryAction = BinaryAction<FloatBinaryOperation, Action::Type::FLOAT_BINARY>;
+
+    class NumericConversion : public ExprAction
     {
-        FloatBinaryAction()
-            : Action(Type::FLOAT_BINARY)
+    public:
+        WF_POLYMORPHIC_SIZING
+
+        NumericConversion(const SourcePosition& position, TypeId result_type, ExprAction* operand)
+            : ExprAction(position, Type::NUMERIC_CONVERSION, result_type), m_operand(operand)
         {
         }
 
-        enum class Operation
-        {
-            ADD,
-            SUBTRACT,
-            MULTIPLY,
-            DIVIDE,
-        };
+        ExprAction* get_operand() { return m_operand; }
+        const ExprAction* get_operand() const { return m_operand; }
 
-        Action* left_operand;
-        Action* right_operand;
+        TypeId get_from_type() const { return m_operand->get_result_type(); }
+    private:
+        ExprAction* m_operand;
     };
 
-    struct IntToFloatAction : Action
+    class IntConstantAction : public ExprAction
     {
-        IntToFloatAction()
-            : Action(Type::INT_TO_FLOAT)
+    public:
+        WF_POLYMORPHIC_SIZING
+
+        IntConstantAction(const SourcePosition& position, TypeId result_type, UInt value)
+            : ExprAction(position, Type::INT_CONSTANT, result_type), m_value(value)
         {
         }
 
-        Action* base_action;
+        UInt get_value() const { return m_value; }
+
+    private:
+        UInt m_value;
     };
 
-    struct FloatToIntAction : Action
+    class FloatConstantAction : public ExprAction
     {
-        FloatToIntAction()
-            : Action(Type::FLOAT_TO_INT)
+    public:
+        WF_POLYMORPHIC_SIZING
+        
+        FloatConstantAction(const SourcePosition& position, TypeId result_type, Float value)
+            : ExprAction(position, Type::FLOAT_CONSTANT, result_type), m_value(value)
         {
         }
 
-        Action* base_action;
-    };
-
-    struct IntConstantAction : Action
-    {
-        IntConstantAction()
-            : Action(Type::INT_CONSTANT)
-        {
-        }
-
-        Int value;
-    };
-
-    struct FloatConstantAction : Action
-    {
-        FloatConstantAction()
-            : Action(Type::FLOAT_CONSTANT)
-        {
-        }
-
-        Float value;
+        Float get_value() const { return m_value; }
+    private:
+        Float m_value;
     };
 }
 

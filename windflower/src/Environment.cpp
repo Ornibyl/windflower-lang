@@ -1,3 +1,4 @@
+#include "Compiler/Resolver.hpp"
 #include "State.hpp"
 
 #include "Utils/Format.hpp"
@@ -74,11 +75,20 @@ namespace wf
     bool Environment::compile(std::size_t idx, const CompileInfo& compile_info)
     {
         Parser parser(m_state, compile_info);
+        Resolver resolver(m_state);
 
         Node* ast = parser.parse();
         if(ast == nullptr)
         {
             m_state->stack.index(idx) = StringObject::from_text(m_state, parser.get_error_message());
+            return false;
+        }
+
+        Action* action_tree = resolver.resolve_ast(ast);
+
+        if(action_tree == nullptr)
+        {
+            m_state->stack.index(idx) = StringObject::from_text(m_state, resolver.get_error_message());
             return false;
         }
 

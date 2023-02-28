@@ -6,7 +6,7 @@ namespace wf
 {
     Parser::Parser(State* state, const CompileInfo& compile_info)
         : m_state(state), m_tokenizer(compile_info.name, compile_info.source), m_error_manager(state),
-            m_newline_ignore_stack(state), allocated_nodes(state)
+            m_newline_ignore_stack(state), m_allocated_nodes(state)
     {
         advance();
     }
@@ -14,7 +14,14 @@ namespace wf
     Node* Parser::parse()
     {
         push_newline_ignore(true);
+
+        SourcePosition expr_position = m_current.get_position();
         Node* ast = parse_expression();
+        if(ast == nullptr)
+        {
+            m_error_manager.push_error(expr_position, "Expected an expression");
+        }
+
         if(!m_error_manager.has_errors() && m_current.get_type() != Token::Type::TT_EOF)
         {
             m_error_manager.push_error(m_current.get_position(), "Expected an operator.");
@@ -99,6 +106,7 @@ namespace wf
         if(node->right_operand == nullptr)
         {
             m_error_manager.push_error(right_operand_position, "Expected an expression.");
+            return nullptr;
         }
 
         switch(op_token.get_type())
@@ -176,23 +184,47 @@ namespace wf
         return node;
     }
 
+    Node* Parser::parse_grouping()
+    {
+        SourcePosition paren_position = m_current.get_position();
+        advance();
+        SourcePosition expr_position = m_current.get_position();
+
+        Node* expr = parse_expression();
+
+        if(expr == nullptr)
+        {
+            m_error_manager.push_error(expr_position, "Expected an expression");
+            return nullptr;
+        }
+
+        if(m_current.get_type() != Token::Type::RIGHT_PAREN)
+        {
+            m_error_manager.push_error(expr_position, "Expected a ')' to match the '( at {}", paren_position);
+        }
+
+        advance();
+
+        return expr;
+    }
+
     const Parser::ExprRule& Parser::get_rule(Token::Type type)
     {
         static const auto rules = arr_from_designators<ExprRule, static_cast<std::size_t>(Token::Type::TT_COUNT), Token::Type>({
-            { Token::Type::TT_EOF,          {   nullptr,                  nullptr,                       ExprPrecedence::NONE               } },
-            { Token::Type::ERROR,           {   nullptr,                  nullptr,                       ExprPrecedence::NONE               } },
+            { Token::Type::TT_EOF,          {   nullptr,                    nullptr,                       ExprPrecedence::NONE               } },
+            { Token::Type::ERROR,           {   nullptr,                    nullptr,                       ExprPrecedence::NONE               } },
 
-            { Token::Type::INT_CONSTANT,    {   &Parser::parse_constant,  nullptr,                       ExprPrecedence::NONE               } },
-            { Token::Type::FLOAT_CONSTANT,  {   &Parser::parse_constant,  nullptr,                       ExprPrecedence::NONE               } },
+            { Token::Type::INT_CONSTANT,    {   &Parser::parse_constant,    nullptr,                       ExprPrecedence::NONE               } },
+            { Token::Type::FLOAT_CONSTANT,  {   &Parser::parse_constant,    nullptr,                       ExprPrecedence::NONE               } },
 
-            { Token::Type::PLUS,            {   &Parser::parse_unary_op,  &Parser::parse_binary_op,      ExprPrecedence::ADDITIVE           } },
-            { Token::Type::MINUS,           {   &Parser::parse_unary_op,  &Parser::parse_binary_op,      ExprPrecedence::ADDITIVE           } },
-            { Token::Type::STAR,            {   nullptr,                  &Parser::parse_binary_op,      ExprPrecedence::MULTIPLICATIVE     } },
-            { Token::Type::SLASH,           {   nullptr,                  &Parser::parse_binary_op,      ExprPrecedence::MULTIPLICATIVE     } },
-            { Token::Type::PERCENT,         {   nullptr,                  &Parser::parse_binary_op,      ExprPrecedence::MULTIPLICATIVE     } },
+            { Token::Type::PLUS,            {   &Parser::parse_unary_op,    &Parser::parse_binary_op,      ExprPrecedence::ADDITIVE           } },
+            { Token::Type::MINUS,           {   &Parser::parse_unary_op,    &Parser::parse_binary_op,      ExprPrecedence::ADDITIVE           } },
+            { Token::Type::STAR,            {   nullptr,                    &Parser::parse_binary_op,      ExprPrecedence::MULTIPLICATIVE     } },
+            { Token::Type::SLASH,           {   nullptr,                    &Parser::parse_binary_op,      ExprPrecedence::MULTIPLICATIVE     } },
+            { Token::Type::PERCENT,         {   nullptr,                    &Parser::parse_binary_op,      ExprPrecedence::MULTIPLICATIVE     } },
 
-            { Token::Type::LEFT_PAREN,      {   nullptr,                  nullptr,                       ExprPrecedence::NONE               } },
-            { Token::Type::RIGHT_PAREN,     {   nullptr,                  nullptr,                       ExprPrecedence::NONE               } },
+            { Token::Type::LEFT_PAREN,      {   &Parser::parse_grouping,    nullptr,                       ExprPrecedence::NONE               } },
+            { Token::Type::RIGHT_PAREN,     {   nullptr,                    nullptr,                       ExprPrecedence::NONE               } },
         });
 
         return rules[static_cast<std::size_t>(type)];
