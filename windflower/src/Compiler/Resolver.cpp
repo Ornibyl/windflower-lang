@@ -91,7 +91,7 @@ namespace wf
     {
         if(expr->get_result_type() == to_type) return expr;
 
-        return allocate_action<NumericConversion>(expr->position, to_type, expr);
+        return allocate_action<NumericConversionAction>(expr->position, to_type, expr);
     }
 
     Action* Resolver::resolve_node(const Node* node)

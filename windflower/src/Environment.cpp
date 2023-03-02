@@ -1,4 +1,3 @@
-#include "Compiler/Resolver.hpp"
 #include "State.hpp"
 
 #include "Utils/Format.hpp"
@@ -6,6 +5,8 @@
 #include "Utils/Allocate.hpp"
 
 #include "Compiler/Parser.hpp"
+#include "Compiler/Resolver.hpp"
+#include "Compiler/CodeGen.hpp"
 
 namespace wf
 {
@@ -74,8 +75,11 @@ namespace wf
 
     bool Environment::compile(std::size_t idx, const CompileInfo& compile_info)
     {
+        BytecodeObject* result_code = construct_ptr<BytecodeObject>(m_state, m_state);
+        m_state->stack.index(idx) = result_code;
         Parser parser(m_state, compile_info);
         Resolver resolver(m_state);
+        CodeGen code_gen(m_state, result_code);
 
         Node* ast = parser.parse();
         if(ast == nullptr)
@@ -92,11 +96,9 @@ namespace wf
             return false;
         }
 
-        m_state->stack.index(idx) = StringObject::from_text(
-            m_state,
-            format(m_state, "{}(\?\?\?) Error: Compilation pipeline is incomplete.", compile_info.name)
-        );
-        return false;
+        code_gen.generate(action_tree);
+
+        return true;
     }
 
     void Environment::call(std::size_t idx, std::size_t return_idx)

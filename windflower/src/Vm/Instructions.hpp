@@ -12,16 +12,23 @@ namespace wf
         NO_OP, // nop
 
         RETURN, // ret
+        RETURN_VALUE, // retv
 
         RESERVE, // rsv
         MOVE, // mov
         LOAD_CONSTANT, // ldk
 
+        NEGATION_INT, // unmi
+        NEGATION_FLOAT, // unmf
+
+        INT_TO_FLOAT,
+        FLOAT_TO_INT,
+
         ADD_INT, // addi
         SUBTRACT_INT, // subi
         MULTIPLY_INT, // muli
         DIVIDE_INT, // divi
-        MOD_INT, // modi
+        MODULO_INT, // modi
 
         ADD_FLOAT, // addf
         SUBTRACT_FLOAT, // subf
@@ -51,6 +58,11 @@ namespace wf
 
         constexpr Instruction()
             : m_instruction(0)
+        {
+        }
+
+        constexpr Instruction(Opcode opcode)
+            : m_instruction(static_cast<std::uint32_t>(opcode) << OPCODE_SHIFT)
         {
         }
 

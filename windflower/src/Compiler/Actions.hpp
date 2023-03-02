@@ -157,12 +157,12 @@ namespace wf
     using IntBinaryAction = BinaryAction<IntBinaryOperation, Action::Type::INT_BINARY>;
     using FloatBinaryAction = BinaryAction<FloatBinaryOperation, Action::Type::FLOAT_BINARY>;
 
-    class NumericConversion : public ExprAction
+    class NumericConversionAction : public ExprAction
     {
     public:
         WF_POLYMORPHIC_SIZING
 
-        NumericConversion(const SourcePosition& position, TypeId result_type, ExprAction* operand)
+        NumericConversionAction(const SourcePosition& position, TypeId result_type, ExprAction* operand)
             : ExprAction(position, Type::NUMERIC_CONVERSION, result_type), m_operand(operand)
         {
         }
@@ -195,7 +195,7 @@ namespace wf
     {
     public:
         WF_POLYMORPHIC_SIZING
-        
+
         FloatConstantAction(const SourcePosition& position, TypeId result_type, Float value)
             : ExprAction(position, Type::FLOAT_CONSTANT, result_type), m_value(value)
         {
