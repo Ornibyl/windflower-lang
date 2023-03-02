@@ -20,8 +20,12 @@ namespace wf
         {
             return it->second;
         }
+
         std::uint32_t position = static_cast<std::uint32_t>(m_output_code->constants.size());
+        int_constant_map[value] = position;
+
         m_output_code->constants.push_back(value);
+        m_output_code->constant_type_infos.push_back(ConstantType::INT);
         return position;
     }
 
@@ -31,8 +35,12 @@ namespace wf
         {
             return it->second;
         }
+
         std::uint32_t position = static_cast<std::uint32_t>(m_output_code->constants.size());
+        float_constant_map[value] = position;
+
         m_output_code->constants.push_back(value);
+        m_output_code->constant_type_infos.push_back(ConstantType::FLOAT);
         return position;
     }
 
@@ -132,7 +140,7 @@ namespace wf
         }
 
         push_instruction_two_op(opcode, left_operand_position, right_operand_position, action->position);
-
+        m_next_available_register--;
     }
 
     void CodeGen::gen_float_binary_op(const FloatBinaryAction* action)
@@ -161,6 +169,7 @@ namespace wf
         }
 
         push_instruction_two_op(opcode, left_operand_position, right_operand_position, action->position);
+        m_next_available_register--;
     }
 
     void CodeGen::gen_int_unary_op(const IntUnaryAction* action)

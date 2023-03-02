@@ -119,6 +119,8 @@ namespace wf
         ExprAction* left_operand = resolve_expr(node->left_operand);
         ExprAction* right_operand = resolve_expr(node->right_operand);
 
+        if(left_operand == nullptr || right_operand == nullptr) return nullptr;
+
         switch(node->operation)
         {
             case BinaryOpNode::Operation::ADD:
@@ -215,6 +217,9 @@ namespace wf
     ExprAction* Resolver::resolve_unary_op(const UnaryOpNode* node)
     {
         ExprAction* operand = resolve_expr(node->operand);
+
+        if(operand == nullptr) return nullptr;
+
         switch(node->operation)
         {
             case UnaryOpNode::Operation::PLUS: return operand;

@@ -42,6 +42,7 @@ namespace wf
         std::size_t get_reserved_register_count() const;
 
         bool compile(std::size_t idx, const CompileInfo& compile_info);
+        void disassemble_bytecode(std::size_t return_idx, std::size_t idx);
 
         void call(std::size_t idx, std::size_t return_idx);
         void call(std::size_t idx);

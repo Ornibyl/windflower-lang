@@ -67,7 +67,11 @@ int main(int argc, const char* argv[])
     };
 
     wf::Environment env(create_info);
-    env.reserve(1);
+    env.reserve(2);
     wftool::compile_from_file(env, 0, "TestScripts/Main.wf");
+
+    env.disassemble_bytecode(1, 0);
+    std::cout << env.get_string(1) << "\n";
+
     env.call(0, 0);
 }

@@ -69,7 +69,7 @@ namespace wf
                 case Opcode::FLOAT_TO_INT:
                 {
                     Value& value = m_state->stack.index(instruction.get_op_long());
-                    value.as_int = static_cast<UInt>(static_cast<Int>(value.as_int));
+                    value.as_int = static_cast<UInt>(static_cast<Int>(value.as_float));
                     break;
                 }
                 case Opcode::ADD_INT:

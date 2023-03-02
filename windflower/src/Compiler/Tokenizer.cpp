@@ -22,6 +22,7 @@ namespace wf
         {
             while(std::isdigit(peek())) advance();
             if(peek() != '.') return make_token(start_position, Token::Type::INT_CONSTANT);
+            advance();
 
             while(std::isdigit(peek())) advance();
             return make_token(start_position, Token::Type::FLOAT_CONSTANT);

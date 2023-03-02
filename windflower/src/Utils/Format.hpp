@@ -25,6 +25,12 @@ namespace wf
     {
         return vformat(state, format_str, fmt::make_format_args(std::forward<Args>(args)...));
     }
+
+    template<typename... Args>
+    void format_to(String& result, fmt::format_string<Args...> format_str, Args&&... args)
+    {
+        fmt::format_to(std::back_inserter(result), format_str, std::forward<Args>(args)...);
+    }
 }
 
 #endif

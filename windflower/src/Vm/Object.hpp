@@ -13,6 +13,11 @@ namespace wf
         std::uint16_t line;
     };
 
+    enum class ConstantType
+    {
+        INT, FLOAT, STRING,
+    };
+
     struct Object
     {
         using polymorphic_size_enable = std::true_type;
@@ -58,12 +63,13 @@ namespace wf
         WF_POLYMORPHIC_SIZING
 
         BytecodeObject(State* state)
-            : Object(state), line_info(state), code(state), constants(state)
+            : Object(state), line_info(state), code(state), constant_type_infos(state), constants(state)
         {
         }
 
         DynamicArray<BytecodeLineInfo> line_info;
         DynamicArray<Instruction> code;
+        DynamicArray<ConstantType> constant_type_infos;
         DynamicArray<Value> constants;
     };
 }

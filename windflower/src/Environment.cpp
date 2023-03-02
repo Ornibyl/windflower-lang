@@ -1,6 +1,7 @@
 #include "State.hpp"
 
 #include "Utils/Format.hpp"
+#include "Vm/Bytecode.hpp"
 #include "Vm/Object.hpp"
 #include "Utils/Allocate.hpp"
 
@@ -99,6 +100,12 @@ namespace wf
         code_gen.generate(action_tree);
 
         return true;
+    }
+
+    void Environment::disassemble_bytecode(std::size_t return_idx, std::size_t idx)
+    {
+        m_state->stack.index(return_idx) = StringObject::from_text(m_state,
+                disassemble_bytecode_object( m_state, m_state->stack.index(idx).as_bytecode() ));
     }
 
     void Environment::call(std::size_t idx, std::size_t return_idx)
