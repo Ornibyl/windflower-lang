@@ -9,11 +9,6 @@ namespace wf
 {
     #define WF_NUMERIC_UNARY_OPERATIONS ADD, SUBTRACT, MULTIPLY, DIVIDE
 
-    enum class TypeId
-    {
-        VOID, INT, FLOAT
-    };
-
     constexpr std::string_view type_id_to_string(TypeId type_id)
     {
         switch(type_id)

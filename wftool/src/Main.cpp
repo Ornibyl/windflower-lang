@@ -68,10 +68,24 @@ int main(int argc, const char* argv[])
 
     wf::Environment env(create_info);
     env.reserve(2);
+
     wftool::compile_from_file(env, 0, "TestScripts/Main.wf");
+    const wf::TypeId return_type = env.get_bytecode_return_type(0);
 
     env.disassemble_bytecode(1, 0);
     std::cout << env.get_string(1) << "\n";
 
     env.call(0, 0);
+    switch(return_type)
+    {
+        case wf::TypeId::INT:
+            std::cout << "Result value: " << env.get_int(0) << "\n";
+            break;
+        case wf::TypeId::FLOAT:
+            std::cout << "Result value: " << env.get_float(0) << "\n";
+            break;
+        case wf::TypeId::VOID:
+            std::cout << "Result value: Unknown type\n";
+            break;
+    }
 }

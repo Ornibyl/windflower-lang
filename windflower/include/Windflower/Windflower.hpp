@@ -12,6 +12,11 @@ namespace wf
     using UInt = std::uint64_t;
     using Float = double;
 
+    enum class TypeId
+    {
+        VOID, INT, FLOAT
+    };
+
     class Allocator
     {
     public:
@@ -43,6 +48,8 @@ namespace wf
 
         bool compile(std::size_t idx, const CompileInfo& compile_info);
         void disassemble_bytecode(std::size_t return_idx, std::size_t idx);
+
+        TypeId get_bytecode_return_type(std::size_t idx);
 
         void call(std::size_t idx, std::size_t return_idx);
         void call(std::size_t idx);

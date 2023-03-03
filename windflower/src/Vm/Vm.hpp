@@ -1,17 +1,24 @@
 #ifndef WF_VM_HPP
 #define WF_VM_HPP
 
+#include <exception>
+
 #include "VmStack.hpp"
 #include "Utils/String.hpp"
 
 namespace wf
 {
-    class VmError
+    class VmError : public std::exception
     {
     public:
         VmError(const String& message)
             : m_message(message)
         {
+        }
+
+        const char* what() const noexcept final
+        {
+            return m_message.c_str();
         }
 
         const String& get_message() const
@@ -35,6 +42,7 @@ namespace wf
 
         void run();
 
+        std::uint16_t get_current_line() const;
         void error(const String& message);
     };
 }

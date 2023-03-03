@@ -9,6 +9,7 @@ namespace wf
 
     void CodeGen::generate(const Action* action_tree)
     {
+        m_output_code->return_type = static_cast<const ExprAction*>(action_tree)->get_result_type();
         std::uint32_t expr_position = m_next_available_register;
         gen_action(action_tree);
         push_instruction_long_op(Opcode::RETURN_VALUE, expr_position, SourcePosition::no_pos());

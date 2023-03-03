@@ -108,6 +108,11 @@ namespace wf
                 disassemble_bytecode_object( m_state, m_state->stack.index(idx).as_bytecode() ));
     }
 
+    TypeId Environment::get_bytecode_return_type(std::size_t idx)
+    {
+        return m_state->stack.index(idx).as_bytecode()->return_type;
+    }
+
     void Environment::call(std::size_t idx, std::size_t return_idx)
     {
         m_state->vm.call(idx, return_idx);

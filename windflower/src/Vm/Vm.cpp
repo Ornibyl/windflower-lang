@@ -130,8 +130,33 @@ namespace wf
         }
     }
 
+    std::uint16_t Vm::get_current_line() const
+    {
+        std::size_t current_line_offset = 0;
+        std::uint16_t current_line = 0;
+        for(const BytecodeLineInfo& line_info : m_state->stack.get_frame_function()->line_info)
+        {
+            if(line_info.offset < m_ip && line_info.offset > current_line_offset)
+            {
+                current_line_offset = line_info.offset;
+                current_line = line_info.line;
+            }
+        }
+
+        return current_line;
+    }
+
     void Vm::error(const String& message)
     {
-        throw VmError(format(m_state, "runtime error: {}", message));
+        const std::uint16_t current_line = get_current_line();
+
+        if(current_line == 0)
+        {
+            throw VmError(format(m_state, "runtime error(\?\?\?): {}", current_line, message));
+        }
+        else
+        {
+            throw VmError(format(m_state, "runtime error(ln: {}): {}", current_line, message));
+        }
     }
 }

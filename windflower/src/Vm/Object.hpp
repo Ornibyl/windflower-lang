@@ -71,6 +71,8 @@ namespace wf
         DynamicArray<Instruction> code;
         DynamicArray<ConstantType> constant_type_infos;
         DynamicArray<Value> constants;
+
+        TypeId return_type = TypeId::VOID;
     };
 }
 
