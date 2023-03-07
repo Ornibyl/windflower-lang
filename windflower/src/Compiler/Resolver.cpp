@@ -78,13 +78,22 @@ struct fmt::formatter<wf::UnaryOpNode::Operation>
 namespace wf
 {
     Resolver::Resolver(State* state)
-        : m_state(state), m_allocated_actions(state), m_error_manager(state)
+        : m_state(state), m_allocated_actions(state), m_error_manager(state), m_symbols(state)
     {
     }
 
     Action* Resolver::resolve_ast(Node* ast)
     {
-        return resolve_node(ast);
+        Action* action_tree = resolve_node(ast);
+
+        if(m_error_manager.has_errors()) return nullptr;
+
+        return action_tree;
+    }
+
+    std::optional<TypeId> Resolver::evaluate_type(BuiltinTypeNode* node)
+    {
+        return node->type_id;
     }
 
     ExprAction* Resolver::promote_expr(ExprAction* expr, TypeId to_type)
@@ -94,13 +103,26 @@ namespace wf
         return allocate_action<NumericConversionAction>(expr->position, to_type, expr);
     }
 
+    bool Resolver::is_implicitly_convertible_to(TypeId from, TypeId to)
+    {
+        return (from == to) || (from == TypeId::INT && to == TypeId::FLOAT);
+    }
+
     Action* Resolver::resolve_node(const Node* node)
     {
         switch(node->type)
         {
-            case Node::Type::BINARY_OP: return resolve_binary_op(static_cast<const BinaryOpNode*>(node));
-            case Node::Type::UNARY_OP: return resolve_unary_op(static_cast<const UnaryOpNode*>(node));
-            case Node::Type::CONSTANT: return resolve_constant(static_cast<const ConstantNode*>(node));
+            case Node::Type::STATEMENT_BLOCK: return resolve_statement_block(static_cast<const StatementBlockNode*>(node));
+            case Node::Type::VARIABLE_DECLARATION: return resolve_variable_declaration(static_cast<const VariableDeclarationNode*>(node));
+            case Node::Type::RETURN: return resolve_return(static_cast<const ReturnNode*>(node));
+
+            case Node::Type::BINARY_OP:
+            case Node::Type::UNARY_OP:
+            case Node::Type::CONSTANT:
+            case Node::Type::VARIABLE_ACCESS:
+            case Node::Type::BUILTIN_TYPE:
+                m_error_manager.push_error(node->position, "Resolver::resolve_node() reached an unexpected point");
+                return nullptr;
         }
     }
 
@@ -111,8 +133,107 @@ namespace wf
             case Node::Type::BINARY_OP: return resolve_binary_op(static_cast<const BinaryOpNode*>(node));
             case Node::Type::UNARY_OP: return resolve_unary_op(static_cast<const UnaryOpNode*>(node));
             case Node::Type::CONSTANT: return resolve_constant(static_cast<const ConstantNode*>(node));
+            case Node::Type::VARIABLE_ACCESS: return resolve_variable_access(static_cast<const VariableAccessNode*>(node));
+
+            case Node::Type::STATEMENT_BLOCK:
+            case Node::Type::BUILTIN_TYPE:
+            case Node::Type::VARIABLE_DECLARATION:
+            case Node::Type::RETURN:
+                m_error_manager.push_error(node->position, "Resolver::resolve_expr() reached an unexpected point");
+                return nullptr;
         }
     }
+
+    Action* Resolver::resolve_statement_block(const StatementBlockNode* node)
+    {
+        DynamicArray<Action*> statements(m_state);
+        for(const Node* statement : node->statements)
+        {
+            Action* action = resolve_node(statement);
+            if(action != nullptr)
+            {
+                statements.emplace_back(action);
+            }
+        }
+
+        return allocate_action<StatementBlockAction>(node->position, std::move(statements), m_symbols.get_stack_symbol_count());
+    }
+
+    Action* Resolver::resolve_variable_declaration(const VariableDeclarationNode* node)
+    {
+        auto it = m_symbols.find(node->name);
+        if(it != m_symbols.end())
+        {
+            m_error_manager.push_error(node->position,
+                "'{}' was already defined when redefined here.",
+                    std::string_view(node->name->text, node->name->length)
+            );
+            return nullptr;
+        }
+
+        ExprAction* initializer = nullptr;
+
+        SymbolInfo& symbol_info = m_symbols.create_variable(node->name);
+
+        if(node->storage_type != nullptr)
+        {
+            std::optional<TypeId> storage_type = evaluate_type(node->storage_type);
+            if(!storage_type.has_value())
+            {
+                return nullptr;
+            }
+            symbol_info.storage_type = storage_type.value();
+        }
+
+        if(node->initializer != nullptr)
+        {
+            initializer = resolve_expr(node->initializer);
+            if(initializer == nullptr) return nullptr;
+
+            if(node->storage_type == nullptr)
+            {
+                symbol_info.storage_type = initializer->get_result_type();
+            }
+            else
+            {
+                if(!is_implicitly_convertible_to(initializer->get_result_type(), symbol_info.storage_type))
+                {
+                    m_error_manager.push_error(node->position,
+                        "'{}' can not be implicitly converted to '{}'.",
+                            initializer->get_result_type(),
+                            symbol_info.storage_type
+                    );
+                    return nullptr;
+                }
+                initializer = promote_expr(initializer, symbol_info.storage_type);
+            }
+        }
+        else
+        {
+            if(symbol_info.storage_type == TypeId::INT)
+            {
+                initializer = allocate_action<IntConstantAction>(node->position, TypeId::INT, 0);
+            }
+            else if(symbol_info.storage_type == TypeId::FLOAT)
+            {
+                initializer = allocate_action<FloatConstantAction>(node->position, TypeId::INT, 0.0);
+            }
+        }
+
+        return allocate_action<CreateStackVariableAction>(node->position, symbol_info.address, initializer);
+    }
+
+    Action* Resolver::resolve_return(const ReturnNode* node)
+    {
+        if(node->return_value == nullptr)
+        {
+            return allocate_action<ReturnAction>(node->position, nullptr);
+        }
+
+        ExprAction* return_value = resolve_expr(node->return_value);
+        return allocate_action<ReturnAction>(node->position, return_value);
+    }
+
 
     ExprAction* Resolver::resolve_binary_op(const BinaryOpNode* node)
     {
@@ -249,6 +370,25 @@ namespace wf
                 return allocate_action<FloatConstantAction>(node->position, TypeId::FLOAT,
                         std::strtod(node->value.data(), nullptr));
         }
+    }
+
+    ExprAction* Resolver::resolve_variable_access(const VariableAccessNode* node)
+    {
+        auto it = m_symbols.find(node->name);
+
+        if(it == m_symbols.end())
+        {
+            m_error_manager.push_error(node->position,
+                "'{}' is not defined when referenced here.",
+                    std::string_view(node->name->text, node->name->length)
+            );
+            return nullptr;
+        }
+
+        // Void for a variable indicates that its type couldn't be resolved.
+        if(it->second.storage_type == TypeId::VOID) return nullptr;
+
+        return allocate_action<StackVariableAccessAction>(node->position, it->second.storage_type, it->second.address);
     }
 
 }

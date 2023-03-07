@@ -9,7 +9,8 @@ namespace wf
 
     void CodeGen::generate(const Action* action_tree)
     {
-        m_output_code->return_type = static_cast<const ExprAction*>(action_tree)->get_result_type();
+        // WARNING: This is EXTREMELY temporary. Top-level returns should most likely not be able to return values.
+        m_output_code->return_type = TypeId::FLOAT;
         std::uint32_t expr_position = m_next_available_register;
         gen_action(action_tree);
         push_instruction_long_op(Opcode::RETURN_VALUE, expr_position, SourcePosition::no_pos());
@@ -88,6 +89,15 @@ namespace wf
     {
         switch(action->type)
         {
+            case Action::Type::STATEMENT_BLOCK:
+                gen_statement_block(static_cast<const StatementBlockAction*>(action));
+                break;
+            case Action::Type::CREATE_STACK_VAR:
+                gen_create_stack_variable(static_cast<const CreateStackVariableAction*>(action));
+                break;
+            case Action::Type::RETURN:
+                gen_return(static_cast<const ReturnAction*>(action));
+                break;
             case Action::Type::INT_BINARY:
                 gen_int_binary_op(static_cast<const IntBinaryAction*>(action));
                 break;
@@ -109,7 +119,37 @@ namespace wf
             case Action::Type::FLOAT_CONSTANT:
                 gen_float_constant(static_cast<const FloatConstantAction*>(action));
                 break;
+            case Action::Type::STACK_VARIABLE_ACCESS:
+                gen_stack_variable_access(static_cast<const StackVariableAccessAction*>(action));
+                break;
         }
+    }
+
+    void CodeGen::gen_statement_block(const StatementBlockAction* action)
+    {
+        push_instruction_long_op(Opcode::RESERVE, action->get_register_count(), action->position);
+        for(const Action* statement : action->get_statements())
+        {
+            gen_action(statement);
+        }
+    }
+
+    void CodeGen::gen_create_stack_variable(const CreateStackVariableAction* action)
+    {
+        gen_action(action->get_initializer());
+    }
+
+    void CodeGen::gen_return(const ReturnAction* action)
+    {
+        if(action->get_return_value() == nullptr)
+        {
+            push_instruction(Opcode::RETURN, action->position);
+            return;
+        }
+
+        const std::uint32_t operand_position = m_next_available_register;
+        gen_action(action->get_return_value());
+        push_instruction_long_op(Opcode::RETURN_VALUE, operand_position, action->position);
     }
 
     void CodeGen::gen_int_binary_op(const IntBinaryAction* action)
@@ -227,6 +267,12 @@ namespace wf
             action->position
         );
 
+        m_next_available_register++;
+    }
+
+    void CodeGen::gen_stack_variable_access(const StackVariableAccessAction* action)
+    {
+        push_instruction_two_op(Opcode::MOVE, m_next_available_register, action->get_address(), action->position);
         m_next_available_register++;
     }
 

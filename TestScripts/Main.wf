@@ -1,1 +1,4 @@
-20 + -4 * (20 / 10.5)  -- Comment!
+var i: Int := 20
+-- Add to a float to convert to one
+--(compiler does an ugly thing meaning only floats can be returned)
+return 0.0 + i

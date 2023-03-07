@@ -1,8 +1,10 @@
 #ifndef WF_ACTIONS_HPP
 #define WF_ACTIONS_HPP
 
+#include "Compiler/SymbolTable.hpp"
 #include "Compiler/Token.hpp"
 #include "Utils/Allocate.hpp"
+#include "Utils/Array.hpp"
 #include "Windflower/Windflower.hpp"
 
 namespace wf
@@ -13,9 +15,9 @@ namespace wf
     {
         switch(type_id)
         {
-            case TypeId::VOID: return "void";
-            case TypeId::INT: return "int";
-            case TypeId::FLOAT: return "float";
+            case TypeId::VOID: return "Void";
+            case TypeId::INT: return "Int";
+            case TypeId::FLOAT: return "Float";
         }
     }
 
@@ -65,6 +67,10 @@ namespace wf
 
         enum class Type
         {
+            STATEMENT_BLOCK,
+            CREATE_STACK_VAR,
+            RETURN,
+
             INT_UNARY,
             FLOAT_UNARY,
             INT_BINARY,
@@ -74,6 +80,8 @@ namespace wf
 
             INT_CONSTANT,
             FLOAT_CONSTANT,
+
+            STACK_VARIABLE_ACCESS,
         };
 
         Action(const SourcePosition& position, Type type)
@@ -99,6 +107,59 @@ namespace wf
         TypeId get_result_type() const { return m_result_type; }
     private:
         TypeId m_result_type;
+    };
+
+    class StatementBlockAction : public Action
+    {
+    public:
+        WF_POLYMORPHIC_SIZING
+
+        StatementBlockAction(const SourcePosition& position, DynamicArray<Action*>&& statements,
+                std::uint32_t register_count)
+            : Action(position, Type::STATEMENT_BLOCK), m_statements(std::move(statements)),
+                m_register_count(register_count)
+        {
+        }
+
+        const DynamicArray<Action*>& get_statements() const { return m_statements; }
+        std::uint32_t get_register_count() const { return m_register_count; }
+    private:
+        DynamicArray<Action*> m_statements;
+        std::uint32_t m_register_count;
+    };
+
+    class CreateStackVariableAction : public Action
+    {
+    public:
+        WF_POLYMORPHIC_SIZING
+
+        CreateStackVariableAction(const SourcePosition& position, RegisterAddress address, ExprAction* initializer)
+            : Action(position, Type::CREATE_STACK_VAR), m_address(address), m_initializer(initializer)
+        {
+        }
+
+        RegisterAddress get_address() const { return m_address; }
+        ExprAction* get_initializer() { return m_initializer; }
+        const ExprAction* get_initializer() const { return m_initializer; }
+    private:
+        RegisterAddress m_address;
+        ExprAction* m_initializer;
+    };
+
+    class ReturnAction : public Action
+    {
+    public:
+        WF_POLYMORPHIC_SIZING
+
+        ReturnAction(const SourcePosition& position, ExprAction* return_value)
+            : Action(position, Type::RETURN), m_return_value(return_value)
+        {
+        }
+
+        ExprAction* get_return_value() { return m_return_value; }
+        const ExprAction* get_return_value() const { return m_return_value; }
+    private:
+        ExprAction* m_return_value;
     };
 
     template<typename OperationEnum, Action::Type ActionType>
@@ -199,6 +260,21 @@ namespace wf
         Float get_value() const { return m_value; }
     private:
         Float m_value;
+    };
+
+    class StackVariableAccessAction : public ExprAction
+    {
+    public:
+        WF_POLYMORPHIC_SIZING
+
+        StackVariableAccessAction(const SourcePosition& position, TypeId result_type, RegisterAddress address)
+            : ExprAction(position, Type::STACK_VARIABLE_ACCESS, result_type), m_address(address)
+        {
+        }
+
+        RegisterAddress get_address() const { return m_address; }
+    private:
+        RegisterAddress m_address;
     };
 }
 

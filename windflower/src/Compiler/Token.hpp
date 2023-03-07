@@ -31,11 +31,17 @@ namespace wf
     public:
         enum class Type
         {
-            TT_EOF, ERROR,
+            TT_EOF, ERROR, NEWLINE,
 
+            IDENTIFIER,
             INT_CONSTANT, FLOAT_CONSTANT,
             PLUS, MINUS, STAR, SLASH, PERCENT,
+            COLON, COLON_EQUALS,
             LEFT_PAREN, RIGHT_PAREN,
+
+            KW_INT, KW_FLOAT,
+            KW_VAR,
+            KW_RETURN,
 
             TT_COUNT,
         };

@@ -33,6 +33,11 @@ namespace wf
 
 
         void gen_action(const Action* action);
+
+        void gen_statement_block(const StatementBlockAction* action);
+        void gen_create_stack_variable(const CreateStackVariableAction* action);
+        void gen_return(const ReturnAction* action);
+
         void gen_int_binary_op(const IntBinaryAction* action);
         void gen_float_binary_op(const FloatBinaryAction* action);
         void gen_int_unary_op(const IntUnaryAction* action);
@@ -40,6 +45,7 @@ namespace wf
         void gen_numeric_conversion(const NumericConversionAction* action);
         void gen_int_constant(const IntConstantAction* action);
         void gen_float_constant(const FloatConstantAction* action);
+        void gen_stack_variable_access(const StackVariableAccessAction* action);
     };
 }
 

@@ -26,6 +26,7 @@ namespace wf
         char peek_next();
 
         Token make_token(SourcePosition position, Token::Type type);
+        Token finish_keyword(SourcePosition position, Token::Type type);
 
         bool is_finished();
         void skip_whitespace();
