@@ -19,7 +19,12 @@ namespace wf
         {
             STATEMENT_BLOCK,
             BUILTIN_TYPE,
+
             VARIABLE_DECLARATION,
+            PARAMETER,
+            ARGUMENT,
+            EXTERN_FUNCTION_DECLARATION,
+
             RETURN,
 
             BINARY_OP,
@@ -27,6 +32,7 @@ namespace wf
             CONSTANT,
 
             VARIABLE_ACCESS,
+            CALL,
         };
 
         Node(Type type)
@@ -76,6 +82,47 @@ namespace wf
         StringObject* name;
         Node* initializer;
         BuiltinTypeNode* storage_type;
+    };
+
+    struct ParameterNode : Node
+    {
+        WF_POLYMORPHIC_SIZING
+
+        ParameterNode()
+            : Node(Type::PARAMETER)
+        {
+        }
+
+        StringObject* argument_label;
+        StringObject* name;
+        BuiltinTypeNode* storage_type;
+    };
+
+    struct ArgumentNode : Node
+    {
+        WF_POLYMORPHIC_SIZING
+
+        ArgumentNode()
+            : Node(Type::ARGUMENT)
+        {
+        }
+
+        StringObject* label;
+        Node* value;
+    };
+
+    struct ExternFunctionDeclarationNode : Node
+    {
+        WF_POLYMORPHIC_SIZING
+
+        ExternFunctionDeclarationNode(State* state)
+            : Node(Type::EXTERN_FUNCTION_DECLARATION), parameters(state)
+        {
+        }
+
+        StringObject* name;
+        DynamicArray<ParameterNode*> parameters;
+        BuiltinTypeNode* return_type;
     };
 
     struct ReturnNode : Node
@@ -155,6 +202,19 @@ namespace wf
         }
 
         StringObject* name;
+    };
+
+    struct CallNode : Node
+    {
+        WF_POLYMORPHIC_SIZING
+
+        CallNode(State* state)
+            : Node(Type::CALL), arguments(state)
+        {
+        }
+
+        Node* callee;
+        DynamicArray<ArgumentNode*> arguments;
     };
 }
 

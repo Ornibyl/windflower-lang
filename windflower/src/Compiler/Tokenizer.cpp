@@ -6,9 +6,16 @@
 namespace wf
 {
     static auto keyword_to_string = arr_from_designators<std::string_view, static_cast<std::size_t>(Token::Type::TT_COUNT), Token::Type>({
+        // While not technically a keyword, its easier to tokenize if we assume its one.
+        { Token::Type::UNDERSCORE,  "_"      },
+
+        { Token::Type::KW_VOID,     "Void"      },
         { Token::Type::KW_INT,      "Int"       },
         { Token::Type::KW_FLOAT,    "Float"     },
+
         { Token::Type::KW_VAR,      "var"       },
+        { Token::Type::KW_EXTERN,   "extern"    },
+
         { Token::Type::KW_RETURN,   "return"    },
     });
 
@@ -40,10 +47,20 @@ namespace wf
         {
             switch(peek())
             {
+                case '_': return finish_keyword(start_position, Token::Type::UNDERSCORE);
+                case 'e': return finish_keyword(start_position, Token::Type::KW_EXTERN);
                 case 'F': return finish_keyword(start_position, Token::Type::KW_FLOAT);
                 case 'I': return finish_keyword(start_position, Token::Type::KW_INT);
                 case 'r': return finish_keyword(start_position, Token::Type::KW_RETURN);
-                case 'v': return finish_keyword(start_position, Token::Type::KW_VAR);
+                case 'v':
+                    advance();
+                    switch(peek())
+                    {
+                        case 'a': return finish_keyword(start_position, Token::Type::KW_VAR);
+                        case 'o': return finish_keyword(start_position, Token::Type::KW_VOID);
+                        default:
+                            break;
+                    }
                 default:
                     break;
             }
@@ -62,6 +79,11 @@ namespace wf
                 return make_token(start_position, Token::Type::PLUS);
             case '-':
                 advance();
+                if(peek() == '>')
+                {
+                    advance();
+                    return make_token(start_position, Token::Type::ARROW);
+                }
                 return make_token(start_position, Token::Type::MINUS);
             case '*':
                 advance();
@@ -78,6 +100,9 @@ namespace wf
             case ')':
                 advance();
                 return make_token(start_position, Token::Type::RIGHT_PAREN);
+            case ',':
+                advance();
+                return make_token(start_position, Token::Type::COMMA);
             case ':':
                 advance();
                 if(peek() == '=')

@@ -53,6 +53,26 @@ namespace wftool
             std::exit(EXIT_FAILURE);
         }
     }
+
+    wf::ReturnState print_int(wf::Environment& env)
+    {
+        wf::Int value = env.get_int(0);
+        std::cout << value << "\n";
+        return wf::ReturnState::NO_VALUE;
+    }
+
+    wf::ReturnState print_float(wf::Environment& env)
+    {
+        wf::Float value = env.get_float(0);
+        std::cout << value << "\n";
+        return wf::ReturnState::NO_VALUE;
+    }
+
+    void register_io_funcs(wf::Environment& env)
+    {
+        env.register_native_func("print_int(_:", &print_int);
+        env.register_native_func("print_float(_:", &print_float);
+    }
 }
 
 int main(int argc, const char* argv[])
@@ -67,25 +87,13 @@ int main(int argc, const char* argv[])
     };
 
     wf::Environment env(create_info);
+    wftool::register_io_funcs(env);
     env.reserve(2);
 
     wftool::compile_from_file(env, 0, "TestScripts/Main.wf");
-    const wf::TypeId return_type = env.get_bytecode_return_type(0);
 
     env.disassemble_bytecode(1, 0);
     std::cout << env.get_string(1) << "\n";
 
-    env.call(0, 0);
-    switch(return_type)
-    {
-        case wf::TypeId::INT:
-            std::cout << "Result value: " << env.get_int(0) << "\n";
-            break;
-        case wf::TypeId::FLOAT:
-            std::cout << "Result value: " << env.get_float(0) << "\n";
-            break;
-        case wf::TypeId::VOID:
-            std::cout << "Result value: Unknown type\n";
-            break;
-    }
+    env.call(0);
 }

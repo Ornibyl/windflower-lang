@@ -37,6 +37,7 @@ namespace wf
             ADDITIVE,
             MULTIPLICATIVE,
             SIGN,
+            CALL,
             PRIMARY,
         };
 
@@ -72,6 +73,10 @@ namespace wf
         StatementBlockNode* parse_statement_block();
         Node* parse_statement();
         VariableDeclarationNode* parse_variable_declaration();
+        ParameterNode* parse_parameter();
+        ArgumentNode* parse_argument();
+        ExternFunctionDeclarationNode* parse_extern_function_declaration();
+
         ReturnNode* parse_return();
 
         Node* parse_expression(ExprPrecedence precedence = ExprPrecedence::ADDITIVE);
@@ -80,6 +85,7 @@ namespace wf
         Node* parse_constant();
         Node* parse_variable_access();
         Node* parse_grouping();
+        Node* parse_call(Node* prev);
 
         static const ExprRule& get_rule(Token::Type type);
 

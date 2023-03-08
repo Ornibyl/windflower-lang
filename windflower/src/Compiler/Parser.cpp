@@ -187,6 +187,165 @@ namespace wf
         return node;
     }
 
+    ParameterNode* Parser::parse_parameter()
+    {
+        ParameterNode* node = allocate_node<ParameterNode>();
+        node->position = m_current.get_position();
+
+        if(m_current.is_keyword())
+        {
+            node->argument_label = StringObject::from_text(m_state, m_current.get_text());
+            advance();
+            if(m_current.get_type() == Token::Type::COLON)
+            {
+                push_error(node->position, "An keyword can only be used as an argument label if the parameter name is specified seperately.");
+                return nullptr;
+            }
+            else if(m_current.get_type() != Token::Type::IDENTIFIER)
+            {
+                push_expected_identifier_error(m_current.get_position());
+                return nullptr;
+            }
+
+            node->name = StringObject::from_text(m_state, m_current.get_text());
+            advance();
+        }
+        else
+        {
+            if(m_current.get_type() != Token::Type::IDENTIFIER)
+            {
+                push_expected_identifier_error(m_current.get_position());
+                return nullptr;
+            }
+            node->argument_label = StringObject::from_text(m_state, m_current.get_text());
+            node->name = node->argument_label;
+            advance();
+
+            if(m_current.get_type() == Token::Type::IDENTIFIER)
+            {
+                node->name = StringObject::from_text(m_state, m_current.get_text());
+                advance();
+            }
+        }
+
+        if(m_current.get_type() != Token::Type::COLON)
+        {
+            push_error(m_current.get_position(), "Expected a ':'.");
+        }
+        advance();
+
+        SourcePosition storage_type_position = m_current.get_position();
+        node->storage_type = parse_builtin_type();
+        if(node->storage_type == nullptr)
+        {
+            push_expected_storage_type_error(storage_type_position);
+        }
+
+        return node;
+    }
+
+    ArgumentNode* Parser::parse_argument()
+    {
+        ArgumentNode* node = allocate_node<ArgumentNode>();
+        node->position = m_current.get_position();
+        node->label = nullptr;
+
+        if(m_current.is_keyword())
+        {
+            node->label = StringObject::from_text(m_state, m_current.get_text());
+            advance();
+            if(m_current.get_type() != Token::Type::COLON)
+            {
+                push_error(m_current.get_position(), "Expected a ':'.");
+                return nullptr;
+            }
+            advance();
+        }
+
+        SourcePosition expr_position = m_current.get_position();
+        node->value = parse_expression();
+        if(node->value == nullptr)
+        {
+            push_expected_expr_error(expr_position);
+            return nullptr;
+        }
+        if(node->label != nullptr && m_current.get_type() == Token::Type::COLON
+            && node->value->type == Node::Type::VARIABLE_ACCESS)
+        {
+            node->label = static_cast<VariableAccessNode*>(node->value)->name;
+            advance();
+
+            expr_position = m_current.get_position();
+            node->value = parse_expression();
+            if(node->value == nullptr)
+            {
+                push_expected_expr_error(expr_position);
+                return nullptr;
+            }
+        }
+        return node;
+    }
+
+    ExternFunctionDeclarationNode* Parser::parse_extern_function_declaration()
+    {
+        ExternFunctionDeclarationNode* node = allocate_node<ExternFunctionDeclarationNode>(m_state);
+        node->position = m_current.get_position();
+        advance();
+
+        if(m_current.get_type() != Token::Type::IDENTIFIER)
+        {
+            push_expected_identifier_error(m_current.get_position());
+            return nullptr;
+        }
+        node->name = StringObject::from_text(m_state, m_current.get_text());
+        advance();
+
+        if(m_current.get_type() != Token::Type::LEFT_PAREN)
+        {
+            push_error(m_current.get_position(), "Expected a '('.");
+            return nullptr;
+        }
+        SourcePosition paren_position = m_current.get_position();
+        advance();
+
+        if(m_current.get_type() != Token::Type::RIGHT_PAREN)
+        {
+            ParameterNode* parameter = parse_parameter();
+            if(parameter == nullptr) return nullptr;
+            node->parameters.emplace_back(parameter);
+
+            while(m_current.get_type() == Token::Type::COMMA)
+            {
+                advance();
+                ParameterNode* parameter = parse_parameter();
+                if(parameter == nullptr) return nullptr;
+                node->parameters.emplace_back(parameter);
+            }
+
+            if(m_current.get_type() != Token::Type::RIGHT_PAREN)
+            {
+                push_error(m_current.get_position(), "Expected a ')' to match the '( at {}", paren_position);
+            }
+        }
+        advance();
+
+        if(m_current.get_type() != Token::Type::ARROW)
+        {
+            push_error(m_current.get_position(), "Expected an '->'.");
+            return nullptr;
+        }
+        advance();
+
+        SourcePosition storage_type_position = m_current.get_position();
+        node->return_type = parse_builtin_type();
+        if(node->return_type == nullptr)
+        {
+            push_expected_storage_type_error(storage_type_position);
+        }
+
+        return node;
+    }
+
     ReturnNode* Parser::parse_return()
     {
         ReturnNode* node = allocate_node<ReturnNode>();
@@ -365,12 +524,43 @@ namespace wf
 
         if(m_current.get_type() != Token::Type::RIGHT_PAREN)
         {
-            push_error(expr_position, "Expected a ')' to match the '( at {}", paren_position);
+            push_error(m_current.get_position(), "Expected a ')' to match the '( at {}", paren_position);
         }
 
         advance();
 
         return expr;
+    }
+
+    Node* Parser::parse_call(Node* prev)
+    {
+        CallNode* node = allocate_node<CallNode>(m_state);
+        node->position = m_current.get_position();
+        advance();
+
+        if(m_current.get_type() != Token::Type::RIGHT_PAREN)
+        {
+            ArgumentNode* argument = parse_argument();
+            if(argument == nullptr) return nullptr;
+            node->arguments.emplace_back(argument);
+
+            while(m_current.get_type() == Token::Type::COMMA)
+            {
+                advance();
+                argument = parse_argument();
+                if(argument == nullptr) return nullptr;
+                node->arguments.emplace_back(argument);
+            }
+
+            if(m_current.get_type() != Token::Type::RIGHT_PAREN)
+            {
+                push_error(m_current.get_position(), "Expected a ')' to match the '( at {}", node->position);
+            }
+        }
+
+        advance();
+
+        return node;
     }
 
     const Parser::ExprRule& Parser::get_rule(Token::Type type)
@@ -390,7 +580,7 @@ namespace wf
             { Token::Type::SLASH,           {   nullptr,                            &Parser::parse_binary_op,       ExprPrecedence::MULTIPLICATIVE      } },
             { Token::Type::PERCENT,         {   nullptr,                            &Parser::parse_binary_op,       ExprPrecedence::MULTIPLICATIVE      } },
 
-            { Token::Type::LEFT_PAREN,      {   &Parser::parse_grouping,            nullptr,                        ExprPrecedence::NONE                } },
+            { Token::Type::LEFT_PAREN,      {   &Parser::parse_grouping,            &Parser::parse_call,            ExprPrecedence::CALL                } },
             { Token::Type::RIGHT_PAREN,     {   nullptr,                            nullptr,                        ExprPrecedence::NONE                } },
         });
 

@@ -1,6 +1,7 @@
 #ifndef WF_TOKEN_HPP
 #define WF_TOKEN_HPP
 
+#include <unordered_map>
 #include <string_view>
 #include <limits>
 
@@ -33,28 +34,39 @@ namespace wf
         {
             TT_EOF, ERROR, NEWLINE,
 
-            IDENTIFIER,
+            IDENTIFIER, UNDERSCORE,
             INT_CONSTANT, FLOAT_CONSTANT,
             PLUS, MINUS, STAR, SLASH, PERCENT,
-            COLON, COLON_EQUALS,
+            COMMA, COLON, COLON_EQUALS, ARROW,
             LEFT_PAREN, RIGHT_PAREN,
 
-            KW_INT, KW_FLOAT,
-            KW_VAR,
+            KW_VOID, KW_INT, KW_FLOAT,
+            KW_VAR, KW_EXTERN,
             KW_RETURN,
 
             TT_COUNT,
         };
 
-        Token() = default;
-        Token(Type type, const SourcePosition& position, std::string_view text)
+        constexpr Token() noexcept
+            : m_type(Token::Type::TT_EOF)
+        {
+        }
+
+        constexpr Token(Type type, const SourcePosition& position, std::string_view text) noexcept
             : m_type(type), m_position(position), m_text(text)
         {
         }
 
-        Type get_type() const { return m_type; }
-        SourcePosition get_position() const { return m_position; }
-        std::string_view get_text() const { return m_text; }
+        constexpr Type get_type() const noexcept { return m_type; }
+        constexpr SourcePosition get_position() const noexcept { return m_position; }
+        constexpr std::string_view get_text() const noexcept { return m_text; }
+
+        constexpr bool is_keyword() const noexcept
+        {
+            return get_type() == Type::KW_VOID || get_type() == Type::KW_INT || get_type() == Type::KW_FLOAT
+                || get_type() == Type::KW_VAR || get_type() == Type::KW_EXTERN
+                || get_type() == Type::KW_RETURN;
+        }
     private:
         Type m_type;
         SourcePosition m_position;

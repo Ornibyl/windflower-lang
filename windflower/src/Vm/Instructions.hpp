@@ -39,10 +39,10 @@ namespace wf
     class Instruction
     {
     public:
-        static constexpr std::uint32_t OPCODE_BIT_WIDTH = 8;
-        static constexpr std::uint32_t OP_A_BIT_WIDTH = 12;
-        static constexpr std::uint32_t OP_B_BIT_WIDTH = 12;
-        static constexpr std::uint32_t OP_LONG_BIT_WIDTH = 24;
+        static constexpr std::uint32_t OPCODE_BIT_WIDTH = 6;
+        static constexpr std::uint32_t OP_A_BIT_WIDTH = 13;
+        static constexpr std::uint32_t OP_B_BIT_WIDTH = 13;
+        static constexpr std::uint32_t OP_LONG_BIT_WIDTH = 26;
         static_assert(OPCODE_BIT_WIDTH + OP_A_BIT_WIDTH + OP_B_BIT_WIDTH == sizeof(std::uint32_t) * 8);
         static_assert(OPCODE_BIT_WIDTH + OP_LONG_BIT_WIDTH == sizeof(std::uint32_t) * 8);
 

@@ -1,4 +1,6 @@
+extern print_int(_ value: Int) -> Void
+extern print_float(_ value: Float) -> Void
+
 var i: Int := 20
--- Add to a float to convert to one
---(compiler does an ugly thing meaning only floats can be returned)
-return 0.0 + i
+
+print(i)

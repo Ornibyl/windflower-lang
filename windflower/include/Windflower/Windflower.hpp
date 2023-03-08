@@ -7,15 +7,23 @@
 namespace wf
 {
     struct State;
+    class Environment;
 
-    using Int = int64_t;
-    using UInt = std::uint64_t;
-    using Float = double;
+    enum class ReturnState
+    {
+        NO_VALUE,
+        VALUE,
+    };
 
     enum class TypeId
     {
         VOID, INT, FLOAT
     };
+
+    using Int = int64_t;
+    using UInt = std::uint64_t;
+    using Float = double;
+    using NativeFunc = ReturnState(*)(Environment& env);
 
     class Allocator
     {
@@ -41,6 +49,8 @@ namespace wf
         Environment(Environment&& other);
         Environment& operator=(Environment&& other);
         ~Environment();
+
+        void register_native_func(std::string_view name, NativeFunc func);
 
         void reserve(std::size_t count);
         void release(std::size_t count);

@@ -36,7 +36,7 @@ namespace wf
         decltype(auto) end() const { return m_symbols.end(); }
         decltype(auto) cend() const { return m_symbols.cend(); }
     private:
-        RegisterAddress m_next_address;
+        RegisterAddress m_next_address = 0;
         HashMap<StringObject*, SymbolInfo> m_symbols;
     };
 }
